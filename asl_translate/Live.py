@@ -15,7 +15,7 @@ import time
 import sys
 from ASL_Model import ASLSequenceInterpreter
 
-# CONFIGURATION
+# Config
 # Available actions match training data 
 actions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 buffer = FrameBuffer(series_length=16) # Holds rolling window of frames
