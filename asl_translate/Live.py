@@ -1,6 +1,6 @@
-# TL;DR This program is the final showcasing and putting the model on display to use. It uses the path created in Train_Model.py to create a yolo26n.pt to use as the model it runs on. There is a HUD that displays
-# the confidence and the letter being signed. There is a yolo bounding box to hold in the person, mediapipe hands to provide the landmarking, and the LSTM to provide the classification with its own created path.
-# It also shows the user the landmarks of their hand. All the letters are available to sign.
+# TL;DR This program is the final showcasing and putting the model on display to use. It uses the path created in Train_Model.py to create a best_asl_model.pth to use as the model it runs on. There is a HUD 
+# that displays the confidence and the letter being signed. There is a yolo bounding box to hold in the person, mediapipe hands to provide the landmarking, and the LSTM to provide the classification 
+# with its own created path. It also shows the user the landmarks of their hand. All the letters are available to sign.
 
 import cv2
 import mediapipe as mp
