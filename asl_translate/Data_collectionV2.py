@@ -1,3 +1,7 @@
+# TL;DR This program is one of the main applications user's will interact with. This collects data via turning on the user's camera showing a bounding box on their person and telling them which letter to sign.
+# During the video, the landmarks are extracted from their hand position including wrist position. The landmarks are then saved as a .npy file inside a folder with the labled sign. In the case of lost data, frozen
+# frames are applied so that the user can go back and re-record them with data_correction. Exit is possible via escape however no pause has yet to be implemented.
+
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
@@ -9,7 +13,7 @@ import time
 import sys
 from frame_buffer import FrameBuffer # Import the helper for series of frames
 
-# ---CONFIG---
+# CONFIG
 # Videos of letter in folder (Don't Change this, for simplicities sake)
 num_sequences = 45 
 # How many frames per video (Don't Change this, due to how LSTM's Work)
@@ -57,11 +61,10 @@ def cleanup():
     cv2.destroyAllWindows()
     
 
-# Loop through video amount
-for sequence in range(start_sequence, end_sequence): #New videos per user that go to the same location
-    # Loop through frames (16 frames per video)
-    window = FrameBuffer(series_length=sequence_length) # Create a new buffer for each video sequence
-#Hopefully sets our wrist anchor
+# Loop through video amount (45 videos)
+for sequence in range(start_sequence, end_sequence):
+    # Make a fresh buffer with all zeroes to be overwritten on with no anchor point set
+    window = FrameBuffer(series_length=sequence_length)
     anchor_coord = None
     last_good_keypoints = np.zeros(21 * 3)
   
@@ -73,7 +76,7 @@ for sequence in range(start_sequence, end_sequence): #New videos per user that g
         yolo_results = yolo_model(frame, verbose=False)
         boxes = yolo_results[0].boxes
         
-        # Default to last good known position
+        # Default to last good known position (Frozen Frame, default Fail-safe)
         keypoints = last_good_keypoints.copy() 
         
         if len(boxes) > 0:
@@ -99,36 +102,35 @@ for sequence in range(start_sequence, end_sequence): #New videos per user that g
                     hand_landmarks = mp_results.hand_landmarks[0]
                     extracted_points = []
                     
-                    # 1. ESTABLISH THE FRAME'S ANCHOR (The Wrist)
+                    # Set Anchor (Wrist)
                     wrist = hand_landmarks[0]
-                    # We need the wrist in global pixel coordinates first
                     wrist_global_x = x1 + int(wrist.x * crop_w)
                     wrist_global_y = y1 + int(wrist.y * crop_h)
                     
                     # Normalize the wrist to screen scale (0 to 1)
                     wrist_norm_x = wrist_global_x / frame_w
                     wrist_norm_y = wrist_global_y / frame_h
-                    wrist_z = wrist.z # MediaPipe Z is already relative to the wrist, but we lock it here
+                    wrist_z = wrist.z 
 
                     for landmark in hand_landmarks:
-                        # 2. GET CURRENT LANDMARK IN GLOBAL PIXELS
+                        # Landmark in global pixels
                         global_x = x1 + int(landmark.x * crop_w)
                         global_y = y1 + int(landmark.y * crop_h)
                         
-                        # 3. NORMALIZE TO SCREEN SCALE (0 to 1)
+                        # Normalize all coordinates from global to screen scale (0 to 1)
                         raw_norm_x = global_x / frame_w
                         raw_norm_y = global_y / frame_h
                         
-                        # 4. SUBTRACT THE ANCHOR (The Magic Fix)
+                        # Subtract the anchor
                         # This makes the wrist ALWAYS (0,0,0). 
-                        # If a fingertip is at X: 0.6 and the wrist is at X: 0.5, the saved value is 0.1
+                        # If a fingertip is at X: 0.6 and the wrist is at X: 0.5, the saved value is 0.1 (distance from wrist to tip is 0.1)
                         final_x = raw_norm_x - wrist_norm_x
                         final_y = raw_norm_y - wrist_norm_y
                         final_z = landmark.z - wrist_z 
                         
                         extracted_points.extend([final_x, final_y, final_z])
                         
-                        # Visual feedback (We use the global pixels so it still draws on the screen properly)
+                        # Visual feedback (We use the global pixels so it still draws on the user's screen properly)
                         cv2.circle(frame, (global_x, global_y), 5, (0, 255, 0), -1)
                         
                     keypoints = np.array(extracted_points)
@@ -146,8 +148,8 @@ for sequence in range(start_sequence, end_sequence): #New videos per user that g
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
 
         if frame_num == 0: 
-            # 2. THE RESPONSIVE PAUSE
-            # Instead of one big 2-second wait, we check for ESC 20 times.
+            # Pause and allow the user to set up hand or exit in the case
+            # Check for ESC 20 times in case of exit
             cv2.putText(frame, f'GET READY FOR {action}...', (120, 200), 
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 4, cv2.LINE_AA)
             cv2.imshow('Data Collection', frame)
@@ -156,9 +158,9 @@ for sequence in range(start_sequence, end_sequence): #New videos per user that g
                 if cv2.waitKey(100) & 0xFF == 27: 
                     print("Exiting during countdown...")
                     cleanup()
-                    sys.exit() # Kills the script immediately
+                    sys.exit()
         else: 
-            # 3. NORMAL CAPTURE
+            # Normal operating condition
             cv2.imshow('Data Collection', frame)
             # Check for ESC during every single frame capture
             if cv2.waitKey(10) & 0xFF == 27:
@@ -167,7 +169,8 @@ for sequence in range(start_sequence, end_sequence): #New videos per user that g
                 sys.exit()
             
     # Saves to file location
-    # Once the loop hits 16 frames, save the 2D array as a .npy file (apparently .npy files are better than our original .csv)
+    # Once the loop hits 16 frames, save the 2D array as a .npy file))))))))))))))))))))))))))))))))))))))))))))))))))))?????
+
     npy_path = os.path.join(DATA_PATH, action, str(sequence))
     np.save(npy_path, window.get_series())
 
