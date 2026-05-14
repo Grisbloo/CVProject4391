@@ -1,7 +1,9 @@
+"""
+Data_CollectionV2.py
 # TL;DR This program is one of the main applications user's will interact with. This collects data via turning on the user's camera showing a bounding box on their person and telling them which letter to sign.
 # During the video, the landmarks are extracted from their hand position including wrist position. The landmarks are then saved as a .npy file inside a folder with the labled sign. In the case of lost data, frozen
 # frames are applied so that the user can go back and re-record them with data_correction. Exit is possible via escape however no pause has yet to be implemented.
-
+"""
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
