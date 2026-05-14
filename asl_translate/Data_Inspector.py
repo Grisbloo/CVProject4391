@@ -1,6 +1,9 @@
-# TL;DR This program is designed purely as added feature to allow the devs to look at the data just to double check the Data_CorrectionV2 script, to make sure that good data isn't being thrown away. Able to take
-# entire folders of .npy files and check through them for unusable data (frozen frames and zeroes) along for the shape of the data if disproportionate. 
-# Prompts the user to run correction on them if there is issues in the dataset.
+"""
+Data_Inspector.py
+TL;DR This program is designed purely as added feature to allow the devs to look at the data just to double check the Data_CorrectionV2 script, to make sure that good data isn't being thrown away. Able to take
+entire folders of .npy files and check through them for unusable data (frozen frames and zeroes) along for the shape of the data if disproportionate. 
+Prompts the user to run correction on them if there is issues in the dataset.
+"""
 
 import numpy as np
 import os
