@@ -1,5 +1,3 @@
-#Quick AI fix for frozen/dropped frames in data MODIFIED FOR Data_collectionV2. Checks for duplicate frames and also enables the anchoring as added in V2 of data collection.
-
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
@@ -11,18 +9,18 @@ import sys
 import time
 from frame_buffer import FrameBuffer
 
-# --- CONFIG ---
+# CONFIG (DO NOT CHANGE THIS)
 user_input = input("Enter letters to check and fix (e.g., A B C) or ALL: ").upper()
 DATA_ROOT = 'ASL_Dataset'
 sequence_length = 16 
 
-# 1. Parse the input into a list
+# Parse the input into a list
 if user_input == "ALL":
     actions = [d for d in os.listdir(DATA_ROOT) if os.path.isdir(os.path.join(DATA_ROOT, d))]
 else:
     actions = user_input.replace(',', ' ').split()
 
-# 2. THE NEW LOOP (Everything below this MUST be indented by one Tab)
+# Check for file path
 for action in actions:
     DATA_PATH = os.path.join(DATA_ROOT, action)
     
@@ -34,7 +32,7 @@ for action in actions:
     print(f"=== NOW PROCESSING LETTER: {action} ===")
     print(f"{'='*40}")
 
-    # --- 1. SCAN FOR CORRUPTED/FROZEN DATA ---
+    # Check for unusable data
     print(f"Scanning {DATA_PATH} for frozen frame drops...")
     bad_sequences = []
     
@@ -44,19 +42,19 @@ for action in actions:
             try:
                 data = np.load(filepath)
                 
-                # Check 1: Did the whole file somehow end up as zeros?
+                # Check 1: All zeroes?
                 if np.all(data == 0):
                     seq_num = int(filename.replace('.npy', ''))
                     bad_sequences.append(seq_num)
                     print(f"[{filename}] CRITICAL FAIL: File is completely empty (Pure Zeros).")
                     continue
                     
-                # Check 2: The Tolerance Threshold for Frozen Frames
+                # Check 2: Max amount of Frozen Frames allowed
                 FROZEN_THRESHOLD = 5
                 frozen_count = 0
                 
                 for i in range(1, data.shape[0]):
-                    # If the current frame is EXACTLY equal to the previous frame
+                    # If the current frame is EXACTLY equal to the previous frame it is frozen
                     if np.array_equal(data[i], data[i-1]):
                         frozen_count += 1
                         
@@ -78,7 +76,7 @@ for action in actions:
     print(f"Total files to re-record: {len(bad_sequences)}")
     input("Press ENTER to start the camera and patch these files...")
     
-    # --- 2. RE-RECORDING SETUP ---
+    # Re-Recording Setup
     yolo_model = YOLO('yolo26n.pt') 
     
     base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
@@ -101,11 +99,11 @@ for action in actions:
         cap.release()
         cv2.destroyAllWindows()
     
-    # --- 3. SURGICAL OVERWRITE LOOP ---
+    # Only overwrite the bad sequences
     for sequence in bad_sequences:
         window = FrameBuffer(series_length=sequence_length)
         
-        # NEW: Apply the Anchor and Failsafe logic to the corrector as well
+        # Anchor cordinate to match with the data collection anchor coord
         anchor_coord = None
         last_good_keypoints = np.zeros(21 * 3)
         
@@ -117,7 +115,7 @@ for action in actions:
             yolo_results = yolo_model(frame, verbose=False)
             boxes = yolo_results[0].boxes
             
-            # Default to the failsafe
+            # Default to the failsafe (filling array last known good keypoints (frozen))
             keypoints = last_good_keypoints.copy()
             
             if len(boxes) > 0:
@@ -143,7 +141,7 @@ for action in actions:
                         hand_landmarks = mp_results.hand_landmarks[0]
                         extracted_points = []
                         
-                        # 1. ESTABLISH THE FRAME'S ANCHOR (The Wrist)
+                        # Frame Anchor (The Wrist)
                         wrist = hand_landmarks[0]
                         # We need the wrist in global pixel coordinates first
                         wrist_global_x = x1 + int(wrist.x * crop_w)
@@ -152,27 +150,27 @@ for action in actions:
                         # Normalize the wrist to screen scale (0 to 1)
                         wrist_norm_x = wrist_global_x / frame_w
                         wrist_norm_y = wrist_global_y / frame_h
-                        wrist_z = wrist.z # MediaPipe Z is already relative to the wrist, but we lock it here
+                        wrist_z = wrist.z 
     
                         for landmark in hand_landmarks:
-                            # 2. GET CURRENT LANDMARK IN GLOBAL PIXELS
+                            # Global landmarking
                             global_x = x1 + int(landmark.x * crop_w)
                             global_y = y1 + int(landmark.y * crop_h)
                             
-                            # 3. NORMALIZE TO SCREEN SCALE (0 to 1)
+                            # Normalize screen scale (0 to 1)
                             raw_norm_x = global_x / frame_w
                             raw_norm_y = global_y / frame_h
                             
-                            # 4. SUBTRACT THE ANCHOR (The Magic Fix)
+                            # Subtract the anchor
                             # This makes the wrist ALWAYS (0,0,0). 
-                            # If a fingertip is at X: 0.6 and the wrist is at X: 0.5, the saved value is 0.1
+                            # If a fingertip is at X: 0.6 and the wrist is at X: 0.5, the saved value is 0.1 (thus giving distance from tip to wrist)
                             final_x = raw_norm_x - wrist_norm_x
                             final_y = raw_norm_y - wrist_norm_y
                             final_z = landmark.z - wrist_z 
                             
                             extracted_points.extend([final_x, final_y, final_z])
                             
-                            # Visual feedback (We use the global pixels so it still draws on the screen properly)
+                            # Visual feedback using global to let the user know exactly what is appeearing
                             cv2.circle(frame, (global_x, global_y), 5, (0, 255, 0), -1)
                             
                         keypoints = np.array(extracted_points)
