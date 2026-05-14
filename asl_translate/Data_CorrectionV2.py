@@ -1,4 +1,7 @@
-# TL:DR This program serves as place to double check the effectiveness of the collected data, to see if there needs to be any re-recording data by opening the .npy files in a selected folder and checking the array to make sure there aren't frozen frames (frames that contain the same coordinates as the array before it), or corrupted frames (frames with all zeroes) which might ruin the ASL model. After detection, the user is prompted to re-record the unusable data which it then overwrites the bad data with the new good data. Might need to be run more than once as there is not an overarching loop to make sure that the new data is also usable. 
+# TL:DR This program serves as place to double check the effectiveness of the collected data, to see if there needs to be any re-recording data by opening the .npy files in a selected folder and checking the array 
+# to make sure there aren't frozen frames (frames that contain the same coordinates as the array before it), or corrupted frames (frames with all zeroes) which might ruin the ASL model. After detection, 
+# the user is prompted to re-record the unusable data which it then overwrites the bad data with the new good data. Might need to be run more than once as there is not an overarching loop to make sure that 
+# the new data is also usable. 
 
 import cv2
 import mediapipe as mp
